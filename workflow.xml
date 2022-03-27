@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<workflow xmlns="http://www.radware.com/vdirect"
+          name="CheckDevices"
+          class="com.radware.vdirect.ps.CheckDevices"
+          version="1.0">
+    <title>Check All Devices Health</title>
+    <description>Return Unavailable devices</description>
+</workflow>
