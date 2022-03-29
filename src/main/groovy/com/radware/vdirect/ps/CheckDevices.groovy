@@ -1,12 +1,15 @@
 package com.radware.vdirect.ps
 
 import com.radware.alteon.api.AdcConnection
+import com.radware.alteon.api.AdcRuntimeException
+import com.radware.alteon.api.AdcTemplateResult
 import com.radware.alteon.sdk.AdcResourceId
 import com.radware.alteon.sdk.IAdcContainer
 import com.radware.alteon.sdk.IAdcInstance
 import com.radware.alteon.workflow.impl.WorkflowAdaptor
 import com.radware.alteon.workflow.impl.WorkflowState
 import com.radware.alteon.workflow.impl.java.Action
+import com.radware.alteon.workflow.impl.java.ConfigurationTemplate
 import com.radware.alteon.workflow.impl.java.Outputs
 import com.radware.alteon.workflow.impl.java.Param
 import com.radware.alteon.workflow.impl.java.Device
@@ -65,14 +68,14 @@ class CheckDevices {
                      log.error String.format("Device %s Network Error", adc)
                      results.add(new DeviceResults(adc, "Network Error"))
                  }else if (!adcConnection.testConfigProtocol(5000)){
-                     log.error String.format("Device %s SNMP Error", adc)
-                     results.add(new DeviceResults(adc, "SNMP Error and Perhaps SSH"))
-                 }else if (!adcConnection.testCLIProtocol(5000)){
-                     log.error String.format("Device %s SSH\\HTTPS Error", adc)
-                     results.add(new DeviceResults(adc, "SSH|HTTPS Error"))
+                     log.error String.format("%s - Config Protocol Error", adc)
+                     results.add(new DeviceResults(adc, "Config Protocol Error"))
+                 }else if (!validateAdcCLI(adcConnection)){
+                     log.error String.format("%s CLI ERROR", adc)
+                     results.add(new DeviceResults(adc, "CLI ERROR"))
                  }
              }catch (Exception e) {
-                results.add(new DeviceResults(adc))
+                results.add(new DeviceResults(adc, "Unknown Error"))
              }
          }
          workflow['output'] = results
@@ -147,5 +150,42 @@ class CheckDevices {
         AdcConnection connection = vdirect.containerManager.getConnection(adc)
         return connection
     }
+
+
+    boolean validateContainer(String name) {
+        try {
+            IAdcContainer adcContainer = vdirect.containerManager.findByName(name)
+            vdirect.containerManager.validate(adcContainer)
+            return true
+        } catch (Exception e) {
+            return false
+        }
+    }
+
+    boolean validateAdcCLI(DeviceConnection adc) {
+        try {
+            runTemplate('no-op.vm', ['adc':adc])
+            return true
+        } catch (Exception e) {
+            return false
+        }
+    }
+
+    def runTemplate(String templateName, Map params) {
+        ConfigurationTemplate template = workflow.getTemplate(templateName)
+        template.setParameters(params)
+        log.debug("Template Name : " + templateName + " PARAMS: " + params.toString())
+        AdcTemplateResult templateResult
+        try {
+            templateResult = template.run()
+            //log.debug("GENERATED SCRIPT" + templateResult.getGeneratedScript())
+            //log.debug("CLI OUTPUT" + templateResult.getCliOutput())
+            //templateResult.parameters
+        } catch (AdcRuntimeException re) {
+            throw re
+        }
+        //return templateResult.getResult()
+    }
+
 
 }

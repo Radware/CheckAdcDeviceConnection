@@ -1,0 +1,3 @@
+#device($adc, 'type=alteon', 'prompt=Alteon')
+
+/info/sys/time
